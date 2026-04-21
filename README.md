@@ -13,7 +13,7 @@ This project follows an MVC architecture on the backend and features a modern, r
 - **Modern UI/UX**: Premium aesthetic built using Vanilla CSS and Recharts, utilizing responsive dynamic grids and subtle animations.
 - **RESTful API**: Well-structured MVC backend with Mongoose models for robust data management.
 
-## Project Structure
+## Project Structure yuvraj singh
 
 ```text
 school-management-system/
