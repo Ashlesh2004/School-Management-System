@@ -1,49 +1,27 @@
+import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
-import generateToken from '../utils/generateToken.js';
-import { validationResult } from 'express-validator';
 
-// @desc    Auth user & get token
-// @route   POST /api/auth/login
-// @access  Public
-export const authUser = async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-       return res.status(400).json({ errors: errors.array() });
-    }
+export const protect = async (req, res, next) => {
+    let token;
 
-    const { email, password } = req.body;
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+        try {
+            token = req.headers.authorization.split(' ')[1];
 
-    try {
-        const user = await User.findOne({ email });
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-        if (user && (await user.matchPassword(password))) {
-            res.json({
-                _id: user._id,
-                name: user.name,
-                email: user.email,
-                role: user.role,
-                token: generateToken(user._id),
-            });
-        } else {
-            res.status(401).json({ message: 'Invalid email or password' });
+            req.user = await User.findById(decoded.id).select('-password');
+
+            if (!req.user) {
+                return res.status(401).json({ message: 'User not found' });
+            }
+
+            next();
+        } catch (error) {
+            console.error(error);
+            return res.status(401).json({ message: 'Token failed' });
         }
-    } catch (error) {
-        res.status(500).json({ message: 'Server Error' });
-    }
-};
-
-// @desc    Get user profile
-// @route   GET /api/auth/profile
-// @access  Private
-export const getUserProfile = async (req, res) => {
-    try {
-        const user = await User.findById(req.user._id).select('-password');
-        if (user) {
-            res.json(user);
-        } else {
-            res.status(404).json({ message: 'User not found' });
-        }
-    } catch (error) {
-        res.status(500).json({ message: 'Server Error' });
+    } else {
+        return res.status(401).json({ message: 'No token provided' });
     }
 };
