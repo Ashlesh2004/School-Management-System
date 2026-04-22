@@ -1,4 +1,4 @@
-import express from 'express';
+ import express from 'express';
 import { getStudentProfile, getMyAttendance, getMyResults, getMyTimetable } from '../controllers/studentController.js';
 import { protect, authorize } from '../middleware/authMiddleware.js';
 
