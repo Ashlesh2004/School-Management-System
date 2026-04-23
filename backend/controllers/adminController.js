@@ -1,66 +1,70 @@
 import User from '../models/User.js';
 import Student from '../models/Student.js';
 import Teacher from '../models/Teacher.js';
-import Class from '../models/Class.js';
+import ClassModel from '../models/Class.js'; // renamed variable
 
-// @desc    Get dashboard stats
+// @desc    Fetch dashboard statistics
 // @route   GET /api/admin/stats
 // @access  Private/Admin
-export const getDashboardStats = async (req, res) => {
+export const fetchDashboardStats = async (req, res) => {
     try {
-        const studentCount = await Student.countDocuments();
-        const teacherCount = await Teacher.countDocuments();
-        const classCount = await Class.countDocuments();
-        const userCount = await User.countDocuments();
+        // using Promise.all for better performance
+        const [students, teachers, classes, users] = await Promise.all([
+            Student.countDocuments(),
+            Teacher.countDocuments(),
+            ClassModel.countDocuments(),
+            User.countDocuments()
+        ]);
 
-        res.json({
-            students: studentCount,
-            teachers: teacherCount,
-            classes: classCount,
-            users: userCount
+        return res.status(200).json({
+            totalStudents: students,
+            totalTeachers: teachers,
+            totalClasses: classes,
+            totalUsers: users
         });
-    } catch (error) {
-        res.status(500).json({ message: 'Server Error' });
+    } catch (err) {
+        console.error(err.message);
+        return res.status(500).json({ error: 'Internal Server Error' });
     }
 };
 
-// @desc    Get all users
+// @desc    Retrieve all users
 // @route   GET /api/admin/users
 // @access  Private/Admin
-export const getUsers = async (req, res) => {
+export const fetchAllUsers = async (req, res) => {
     try {
-        const users = await User.find({}).select('-password');
-        res.json(users);
-    } catch (error) {
-        res.status(500).json({ message: 'Server Error' });
+        const userList = await User.find().select('-password');
+        return res.status(200).json({ count: userList.length, data: userList });
+    } catch (err) {
+        console.error(err.message);
+        return res.status(500).json({ error: 'Internal Server Error' });
     }
 };
 
-// @desc    Create a regular user (for simple demonstration)
+// @desc    Add a new user
 // @route   POST /api/admin/users
 // @access  Private/Admin
-export const createUser = async (req, res) => {
-    const { name, email, password, role } = req.body;
+export const addUser = async (req, res) => {
     try {
-        const userExists = await User.findOne({ email });
-        if (userExists) {
-            return res.status(400).json({ message: 'User already exists' });
+        const { name, email, password, role } = req.body;
+
+        // check if email already exists
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.status(409).json({ error: 'Email already registered' });
         }
 
-        const user = await User.create({
-            name,
-            email,
-            password,
-            role
-        });
+        const newUser = new User({ name, email, password, role });
+        const savedUser = await newUser.save();
 
-        res.status(201).json({
-            _id: user._id,
-            name: user.name,
-            email: user.email,
-            role: user.role
+        return res.status(201).json({
+            id: savedUser._id,
+            name: savedUser.name,
+            email: savedUser.email,
+            role: savedUser.role
         });
-    } catch (error) {
-        res.status(500).json({ message: 'Server Error' });
+    } catch (err) {
+        console.error(err.message);
+        return res.status(500).json({ error: 'Internal Server Error' });
     }
 };
